@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Harmonic Particle Flow</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { overflow: hidden; background: #0F111A; touch-action: none; }
+        canvas { position: fixed; top: 0; left: 0; }
+        .interactive-dot {
+            position: fixed;
+            width: 12px;
+            height: 12px;
+            background: rgba(160, 180, 255, 0.3);
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+        }
+    </style>
+</head>
+<body>
+    <div class="interactive-dot" id="cursor"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        class HarmonicFlow {
+            constructor() {
+                this.init();
+            }
+
+            init() {
+                this.initRenderer();
+                this.initScene();
+                this.initParticles();
+                this.initEventListeners();
+                this.clock = new THREE.Clock();
+                this.params = {
+                    baseForce: 0.4,    // 基础力场强度
+                    mouseForce: 2.8,   // 鼠标力强度
+                    colorResponse: 18, // 颜色响应强度
+                    speedLimit: 2.4    // 最大速度限制
+                };
+                this.animate();
+            }
+
+            initRenderer() {
+                this.renderer = new THREE.WebGLRenderer({
+                    antialias: true,
+                    alpha: true,
+                    powerPreference: "high-performance"
+                });
+                this.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.outputEncoding = THREE.sRGBEncoding;
+                document.body.appendChild(this.renderer.domElement);
+            }
+
+            initScene() {
+                this.scene = new THREE.Scene();
+                this.camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 1, 1000);
+                this.camera.position.z = 180;
+
+                // 动态光效系统
+                this.focusLight = new THREE.PointLight(0x80A0FF, 3.2, 200);
+                this.focusLight.position.set(0, 0, 50);
+                this.scene.add(
+                    new THREE.AmbientLight(0x404040, 1.4),
+                    this.focusLight
+                );
+            }
+
+            initParticles() {
+                const PARTICLE_COUNT = 8000;
+                this.geometry = new THREE.BufferGeometry();
+                
+                const positions = new Float32Array(PARTICLE_COUNT * 3);
+                const colors = new Float32Array(PARTICLE_COUNT * 3);
+                this.velocities = new Float32Array(PARTICLE_COUNT * 3);
+
+                // 生成螺旋星系式初始化
+                const spiralTurns = 3;
+                for(let i = 0; i < PARTICLE_COUNT; i++) {
+                    const angle = (i / PARTICLE_COUNT) * Math.PI * 2 * spiralTurns;
+                    const radius = 60 + (i % 20) * 2;
+                    
+                    positions[i*3] = Math.cos(angle) * radius;
+                    positions[i*3+1] = Math.sin(angle) * radius;
+                    positions[i*3+2] = (Math.random() - 0.5) * 30;
+
+                    // 初始速度（轨道速度 + 随机偏移）
+                    const baseSpeed = 0.6;
+                    this.velocities[i*3] = -Math.sin(angle) * baseSpeed;
+                    this.velocities[i*3+1] = Math.cos(angle) * baseSpeed;
+                    this.velocities[i*3+2] = (Math.random() - 0.5) * 0.2;
+
+                    // 初始颜色（径向渐变）
+                    const hue = 220 + (radius/100)*30;
+                    const rgb = this.hslToRgb(hue/360, 0.7, 0.6);
+                    colors[i*3] = rgb[0];
+                    colors[i*3+1] = rgb[1];
+                    colors[i*3+2] = rgb[2];
+                }
+
+                this.geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                this.geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+                this.material = new THREE.PointsMaterial({
+                    size: 0.8,
+                    vertexColors: true,
+                    transparent: true,
+                    blending: THREE.AdditiveBlending,
+                    sizeAttenuation: true,
+                    opacity: 0.95
+                });
+
+                this.particles = new THREE.Points(this.geometry, this.material);
+                this.scene.add(this.particles);
+
+                this.mouse = new THREE.Vector3();
+                this.isInteracting = false;
+            }
+
+            hslToRgb(h, s, l) {
+                let r, g, b;
+                const hue2rgb = (p, q, t) => {
+                    if(t < 0) t += 1;
+                    if(t > 1) t -= 1;
+                    if(t < 1/6) return p + (q - p) * 6 * t;
+                    if(t < 1/2) return q;
+                    if(t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                    return p;
+                };
+                const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                const p = 2 * l - q;
+                r = hue2rgb(p, q, h + 1/3);
+                g = hue2rgb(p, q, h);
+                b = hue2rgb(p, q, h - 1/3);
+                return [r, g, b];
+            }
+
+            initEventListeners() {
+                const cursor = document.getElementById('cursor');
+                const updateMouse = (x, y) => {
+                    this.mouse.set(
+                        (x / window.innerWidth) * 2 - 1,
+                        -(y / window.innerHeight) * 2 + 1,
+                        0.5
+                    ).unproject(this.camera);
+                    cursor.style.left = x + 'px';
+                    cursor.style.top = y + 'px';
+                    this.isInteracting = true;
+                };
+
+                window.addEventListener('mousemove', e => updateMouse(e.clientX, e.clientY));
+                window.addEventListener('touchmove', e => {
+                    e.preventDefault();
+                    updateMouse(e.touches[0].clientX, e.touches[0].clientY);
+                }, { passive: false });
+
+                window.addEventListener('mouseleave', () => {
+                    this.isInteracting = false;
+                    cursor.style.opacity = '0';
+                });
+                window.addEventListener('mouseenter', () => cursor.style.opacity = '1');
+            }
+
+            applyForces(particlePos, velocity, delta) {
+                const toMouse = new THREE.Vector3().subVectors(this.mouse, particlePos);
+                const mouseDist = toMouse.length();
+                
+                // 动态力场系统
+                if (mouseDist < 150) {
+                    // 核心吸引场（0-50px）
+                    if (mouseDist < 50) {
+                        const strength = (1 - mouseDist/50) * this.params.mouseForce;
+                        velocity.add(toMouse.normalize().multiplyScalar(strength * delta * 2.4));
+                    }
+                    
+                    // 切向力场（30-120px）
+                    if (mouseDist > 30 && mouseDist < 120) {
+                        const tangent = new THREE.Vector3(-toMouse.y, toMouse.x, 0)
+                            .normalize()
+                            .multiplyScalar(this.params.mouseForce * delta * 0.8);
+                        velocity.add(tangent);
+                    }
+
+                    // 排斥场（防止粒子聚集）
+                    if (mouseDist < 80) {
+                        const repelStrength = Math.pow(1 - mouseDist/80, 2) * 0.6;
+                        velocity.add(toMouse.normalize().multiplyScalar(-repelStrength * delta));
+                    }
+                }
+
+                // 基础轨道力场
+                const toCenter = new THREE.Vector3(-particlePos.x, -particlePos.y, 0)
+                    .multiplyScalar(this.params.baseForce * delta);
+                velocity.add(toCenter);
+
+                // 速度限制
+                if (velocity.length() > this.params.speedLimit) {
+                    velocity.normalize().multiplyScalar(this.params.speedLimit);
+                }
+            }
+
+            updateParticles(delta) {
+                const positions = this.geometry.attributes.position.array;
+                const colors = this.geometry.attributes.color.array;
+
+                for (let i = 0; i < positions.length; i += 3) {
+                    const velocity = new THREE.Vector3(
+                        this.velocities[i],
+                        this.velocities[i+1],
+                        this.velocities[i+2]
+                    );
+
+                    // 仅在有交互时应用鼠标力
+                    if (this.isInteracting) {
+                        this.applyForces(
+                            new THREE.Vector3(positions[i], positions[i+1], positions[i+2]),
+                            velocity,
+                            delta
+                        );
+                    }
+
+                    // 运动衰减
+                    velocity.multiplyScalar(0.96);
+                    
+                    // 更新位置
+                    positions[i] += velocity.x;
+                    positions[i+1] += velocity.y;
+                    positions[i+2] += velocity.z;
+
+                    // 动态颜色反馈
+                    const speed = velocity.length();
+                    const hueShift = speed * this.params.colorResponse;
+                    const rgb = this.hslToRgb(
+                        (220 + Math.min(hueShift, 50))/360,
+                        0.7,
+                        0.6 + speed * 0.3
+                    );
+                    colors[i] = rgb[0];
+                    colors[i+1] = rgb[1];
+                    colors[i+2] = rgb[2];
+                }
+
+                this.geometry.attributes.position.needsUpdate = true;
+                this.geometry.attributes.color.needsUpdate = true;
+            }
+
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                const delta = this.clock.getDelta();
+                
+                // 光效追踪系统
+                this.focusLight.position.lerp(this.mouse, 0.15);
+                this.focusLight.intensity = this.isInteracting ? 4.0 : 2.4;
+                this.focusLight.color.setHSL(
+                    0.63 + (this.isInteracting ? 0.05 : 0),
+                    0.8,
+                    0.7
+                );
+
+                this.updateParticles(delta);
+                this.renderer.render(this.scene, this.camera);
+            }
+        }
+
+        new HarmonicFlow();
+    </script>
+</body>
+</html>
