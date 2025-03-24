@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Harmonic Particle Flow</title>
+    <title>Enhanced Harmonic Particle Flow</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { overflow: hidden; background: #0F111A; touch-action: none; }
+        body { overflow: hidden; background: #0F111A; touch-action: none; font-family: 'Arial', sans-serif; }
         canvas { position: fixed; top: 0; left: 0; }
         .interactive-dot {
             position: fixed;
@@ -16,11 +16,179 @@
             border-radius: 50%;
             pointer-events: none;
             transform: translate(-50%, -50%);
+            transition: background 0.3s ease;
+        }
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 100;
+            background: rgba(15, 17, 26, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            color: #fff;
+            transition: opacity 0.5s ease;
+            opacity: 0.2;
+        }
+        .controls:hover {
+            opacity: 1;
+        }
+        .slider-container {
+            margin: 8px 0;
+            display: flex;
+            align-items: center;
+        }
+        .slider-container label {
+            width: 140px;
+            font-size: 12px;
+        }
+        .slider-container input {
+            flex: 1;
+        }
+        .mode-selector {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .mode-btn {
+            background: rgba(160, 180, 255, 0.2);
+            border: none;
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+        .mode-btn:hover, .mode-btn.active {
+            background: rgba(160, 180, 255, 0.5);
+        }
+        .welcome-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 17, 26, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            color: #fff;
+            transition: opacity 1s ease;
+        }
+        .welcome-title {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            background: linear-gradient(45deg, #80A0FF, #FF80BF);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .welcome-text {
+            max-width: 600px;
+            text-align: center;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+        .start-btn {
+            background: linear-gradient(45deg, #80A0FF, #8080FF);
+            border: none;
+            color: #fff;
+            padding: 12px 30px;
+            border-radius: 30px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .start-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        .help-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(160, 180, 255, 0.2);
+            border: none;
+            color: #fff;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 100;
+            transition: all 0.3s;
+        }
+        .help-btn:hover {
+            background: rgba(160, 180, 255, 0.5);
+        }
+        .stats {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            color: rgba(255,255,255,0.7);
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 100;
         }
     </style>
 </head>
 <body>
     <div class="interactive-dot" id="cursor"></div>
+    <div class="controls" id="controls">
+        <h3 style="margin-bottom: 15px; font-size: 14px;">粒子系统控制面板</h3>
+        
+        <div class="slider-container">
+            <label for="baseForce">基础力场强度</label>
+            <input type="range" id="baseForce" min="0.1" max="1" step="0.05" value="0.4">
+        </div>
+        
+        <div class="slider-container">
+            <label for="mouseForce">鼠标力场强度</label>
+            <input type="range" id="mouseForce" min="0.5" max="5" step="0.1" value="2.8">
+        </div>
+        
+        <div class="slider-container">
+            <label for="colorResponse">颜色响应强度</label>
+            <input type="range" id="colorResponse" min="5" max="30" step="1" value="18">
+        </div>
+        
+        <div class="slider-container">
+            <label for="speedLimit">最大速度限制</label>
+            <input type="range" id="speedLimit" min="1" max="5" step="0.1" value="2.4">
+        </div>
+        
+        <div class="slider-container">
+            <label for="particleSize">粒子大小</label>
+            <input type="range" id="particleSize" min="0.3" max="2" step="0.1" value="0.8">
+        </div>
+        
+        <div class="mode-selector">
+            <button class="mode-btn active" data-mode="default">默认模式</button>
+            <button class="mode-btn" data-mode="explosion">爆炸效果</button>
+            <button class="mode-btn" data-mode="vortex">漩涡模式</button>
+            <button class="mode-btn" data-mode="gravity">引力井</button>
+            <button class="mode-btn" data-mode="chaos">混沌模式</button>
+        </div>
+    </div>
+    
+    <div class="welcome-screen" id="welcome">
+        <h1 class="welcome-title">和谐粒子流</h1>
+        <p class="welcome-text">
+            欢迎体验这个互动粒子系统。移动鼠标或触摸屏幕来与粒子交互，尝试不同的模式和设置来创造独特的视觉效果。
+        </p>
+        <button class="start-btn" id="startBtn">开始体验</button>
+    </div>
+    
+    <button class="help-btn" id="helpBtn">?</button>
+    <div class="stats" id="stats"></div>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
         class HarmonicFlow {
@@ -33,13 +201,42 @@
                 this.initScene();
                 this.initParticles();
                 this.initEventListeners();
+                this.initControls();
                 this.clock = new THREE.Clock();
                 this.params = {
                     baseForce: 0.4,    // 基础力场强度
                     mouseForce: 2.8,   // 鼠标力强度
                     colorResponse: 18, // 颜色响应强度
-                    speedLimit: 2.4    // 最大速度限制
+                    speedLimit: 2.4,   // 最大速度限制
+                    particleSize: 0.8, // 粒子大小
+                    currentMode: 'default' // 当前模式
                 };
+                this.stats = {
+                    fps: 0,
+                    activeParticles: 0,
+                    mouseInteractions: 0
+                };
+                this.lastTime = 0;
+                this.frameCount = 0;
+                
+                // 欢迎屏幕
+                const welcome = document.getElementById('welcome');
+                const startBtn = document.getElementById('startBtn');
+                startBtn.addEventListener('click', () => {
+                    welcome.style.opacity = '0';
+                    setTimeout(() => {
+                        welcome.style.display = 'none';
+                        this.playIntroAnimation();
+                    }, 1000);
+                });
+                
+                // 帮助按钮
+                const helpBtn = document.getElementById('helpBtn');
+                helpBtn.addEventListener('click', () => {
+                    welcome.style.display = 'flex';
+                    welcome.style.opacity = '1';
+                });
+                
                 this.animate();
             }
 
@@ -63,19 +260,28 @@
                 // 动态光效系统
                 this.focusLight = new THREE.PointLight(0x80A0FF, 3.2, 200);
                 this.focusLight.position.set(0, 0, 50);
-                this.scene.add(
-                    new THREE.AmbientLight(0x404040, 1.4),
-                    this.focusLight
-                );
+                this.ambientLight = new THREE.AmbientLight(0x404040, 1.4);
+                this.scene.add(this.ambientLight, this.focusLight);
+                
+                // 添加辅助光源
+                this.accentLight1 = new THREE.PointLight(0xFF80BF, 2, 150);
+                this.accentLight1.position.set(80, 80, 30);
+                this.accentLight2 = new THREE.PointLight(0x80FFEA, 2, 150);
+                this.accentLight2.position.set(-80, -80, 30);
+                this.scene.add(this.accentLight1, this.accentLight2);
             }
 
             initParticles() {
                 const PARTICLE_COUNT = 8000;
+                this.PARTICLE_COUNT = PARTICLE_COUNT;
                 this.geometry = new THREE.BufferGeometry();
                 
                 const positions = new Float32Array(PARTICLE_COUNT * 3);
                 const colors = new Float32Array(PARTICLE_COUNT * 3);
+                const sizes = new Float32Array(PARTICLE_COUNT);
                 this.velocities = new Float32Array(PARTICLE_COUNT * 3);
+                this.originalPositions = new Float32Array(PARTICLE_COUNT * 3);
+                this.originalVelocities = new Float32Array(PARTICLE_COUNT * 3);
 
                 // 生成螺旋星系式初始化
                 const spiralTurns = 3;
@@ -83,15 +289,26 @@
                     const angle = (i / PARTICLE_COUNT) * Math.PI * 2 * spiralTurns;
                     const radius = 60 + (i % 20) * 2;
                     
+                    // 初始位置
                     positions[i*3] = Math.cos(angle) * radius;
                     positions[i*3+1] = Math.sin(angle) * radius;
                     positions[i*3+2] = (Math.random() - 0.5) * 30;
+                    
+                    // 保存原始位置用于重置
+                    this.originalPositions[i*3] = positions[i*3];
+                    this.originalPositions[i*3+1] = positions[i*3+1];
+                    this.originalPositions[i*3+2] = positions[i*3+2];
 
                     // 初始速度（轨道速度 + 随机偏移）
                     const baseSpeed = 0.6;
                     this.velocities[i*3] = -Math.sin(angle) * baseSpeed;
                     this.velocities[i*3+1] = Math.cos(angle) * baseSpeed;
                     this.velocities[i*3+2] = (Math.random() - 0.5) * 0.2;
+                    
+                    // 保存原始速度
+                    this.originalVelocities[i*3] = this.velocities[i*3];
+                    this.originalVelocities[i*3+1] = this.velocities[i*3+1];
+                    this.originalVelocities[i*3+2] = this.velocities[i*3+2];
 
                     // 初始颜色（径向渐变）
                     const hue = 220 + (radius/100)*30;
@@ -99,18 +316,51 @@
                     colors[i*3] = rgb[0];
                     colors[i*3+1] = rgb[1];
                     colors[i*3+2] = rgb[2];
+                    
+                    // 变化的粒子大小
+                    sizes[i] = 0.8 * (0.8 + Math.random() * 0.4);
                 }
 
                 this.geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
                 this.geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+                this.geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
 
-                this.material = new THREE.PointsMaterial({
-                    size: 0.8,
-                    vertexColors: true,
+                const vertexShader = `
+                    attribute float size;
+                    varying vec3 vColor;
+                    
+                    void main() {
+                        vColor = color;
+                        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                        gl_PointSize = size * (300.0 / -mvPosition.z);
+                        gl_Position = projectionMatrix * mvPosition;
+                    }
+                `;
+                
+                const fragmentShader = `
+                    varying vec3 vColor;
+                    
+                    void main() {
+                        // 创建圆形粒子
+                        float r = distance(gl_PointCoord, vec2(0.5, 0.5));
+                        if (r > 0.5) discard;
+                        
+                        // 添加发光效果
+                        float intensity = 1.0 - 2.0 * r;
+                        vec3 glow = vColor * intensity * 1.2;
+                        
+                        gl_FragColor = vec4(glow, 1.0);
+                    }
+                `;
+
+                this.material = new THREE.ShaderMaterial({
+                    uniforms: {},
+                    vertexShader: vertexShader,
+                    fragmentShader: fragmentShader,
                     transparent: true,
                     blending: THREE.AdditiveBlending,
-                    sizeAttenuation: true,
-                    opacity: 0.95
+                    depthWrite: false,
+                    vertexColors: true
                 });
 
                 this.particles = new THREE.Points(this.geometry, this.material);
@@ -118,6 +368,37 @@
 
                 this.mouse = new THREE.Vector3();
                 this.isInteracting = false;
+            }
+            
+            playIntroAnimation() {
+                const positions = this.geometry.attributes.position.array;
+                const centerPoint = new THREE.Vector3(0, 0, 0);
+                
+                // 将所有粒子放置在中心点
+                for (let i = 0; i < positions.length; i += 3) {
+                    positions[i] = centerPoint.x + (Math.random() - 0.5) * 10;
+                    positions[i+1] = centerPoint.y + (Math.random() - 0.5) * 10;
+                    positions[i+2] = centerPoint.z + (Math.random() - 0.5) * 10;
+                    
+                    // 初始爆发速度
+                    const direction = new THREE.Vector3(
+                        this.originalPositions[i] - centerPoint.x,
+                        this.originalPositions[i+1] - centerPoint.y,
+                        this.originalPositions[i+2] - centerPoint.z
+                    ).normalize();
+                    
+                    this.velocities[i] = direction.x * 5;
+                    this.velocities[i+1] = direction.y * 5;
+                    this.velocities[i+2] = direction.z * 5;
+                }
+                
+                this.geometry.attributes.position.needsUpdate = true;
+                this.introAnimationPlaying = true;
+                
+                // 缓慢过渡到原始速度
+                setTimeout(() => {
+                    this.introAnimationPlaying = false;
+                }, 3000);
             }
 
             hslToRgb(h, s, l) {
@@ -149,6 +430,7 @@
                     cursor.style.left = x + 'px';
                     cursor.style.top = y + 'px';
                     this.isInteracting = true;
+                    this.stats.mouseInteractions++;
                 };
 
                 window.addEventListener('mousemove', e => updateMouse(e.clientX, e.clientY));
@@ -162,14 +444,211 @@
                     cursor.style.opacity = '0';
                 });
                 window.addEventListener('mouseenter', () => cursor.style.opacity = '1');
+                
+                // 添加点击事件以创建爆炸效果
+                window.addEventListener('click', () => {
+                    if (this.params.currentMode === 'default' || this.params.currentMode === 'explosion') {
+                        this.createExplosion(this.mouse);
+                    }
+                });
+                
+                // 窗口大小调整
+                window.addEventListener('resize', () => {
+                    this.camera.aspect = window.innerWidth / window.innerHeight;
+                    this.camera.updateProjectionMatrix();
+                    this.renderer.setSize(window.innerWidth, window.innerHeight);
+                });
+                
+                // 键盘控制
+                window.addEventListener('keydown', (e) => {
+                    if (e.code === 'Space') {
+                        this.resetParticles();
+                    }
+                });
+            }
+            
+            initControls() {
+                // 滑块控制
+                document.getElementById('baseForce').addEventListener('input', (e) => {
+                    this.params.baseForce = parseFloat(e.target.value);
+                });
+                
+                document.getElementById('mouseForce').addEventListener('input', (e) => {
+                    this.params.mouseForce = parseFloat(e.target.value);
+                });
+                
+                document.getElementById('colorResponse').addEventListener('input', (e) => {
+                    this.params.colorResponse = parseFloat(e.target.value);
+                });
+                
+                document.getElementById('speedLimit').addEventListener('input', (e) => {
+                    this.params.speedLimit = parseFloat(e.target.value);
+                });
+                
+                document.getElementById('particleSize').addEventListener('input', (e) => {
+                    const newSize = parseFloat(e.target.value);
+                    this.params.particleSize = newSize;
+                    
+                    const sizes = this.geometry.attributes.size.array;
+                    for (let i = 0; i < sizes.length; i++) {
+                        sizes[i] = newSize * (0.8 + Math.random() * 0.4);
+                    }
+                    this.geometry.attributes.size.needsUpdate = true;
+                });
+                
+                // 模式切换
+                const modeBtns = document.querySelectorAll('.mode-btn');
+                modeBtns.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        modeBtns.forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        this.params.currentMode = btn.getAttribute('data-mode');
+                        
+                        // 重置粒子状态当切换模式时
+                        if (this.params.currentMode === 'default') {
+                            this.resetParticles();
+                        }
+                        
+                        // 为漩涡模式调整参数
+                        if (this.params.currentMode === 'vortex') {
+                            this.createVortexEffect();
+                        }
+                        
+                        // 混沌模式
+                        if (this.params.currentMode === 'chaos') {
+                            this.createChaosEffect();
+                        }
+                    });
+                });
+            }
+            
+            resetParticles() {
+                const positions = this.geometry.attributes.position.array;
+                
+                for (let i = 0; i < positions.length; i += 3) {
+                    positions[i] = this.originalPositions[i];
+                    positions[i+1] = this.originalPositions[i+1];
+                    positions[i+2] = this.originalPositions[i+2];
+                    
+                    this.velocities[i] = this.originalVelocities[i];
+                    this.velocities[i+1] = this.originalVelocities[i+1];
+                    this.velocities[i+2] = this.originalVelocities[i+2];
+                }
+                
+                this.geometry.attributes.position.needsUpdate = true;
+            }
+            
+            createExplosion(center) {
+                const positions = this.geometry.attributes.position.array;
+                const colors = this.geometry.attributes.color.array;
+                
+                // 爆炸范围
+                const radius = 20;
+                let particlesAffected = 0;
+                
+                for (let i = 0; i < positions.length; i += 3) {
+                    const particlePos = new THREE.Vector3(positions[i], positions[i+1], positions[i+2]);
+                    const distance = particlePos.distanceTo(center);
+                    
+                    if (distance < radius) {
+                        particlesAffected++;
+                        
+                        // 计算方向向量
+                        const direction = new THREE.Vector3().subVectors(particlePos, center).normalize();
+                        
+                        // 根据距离设置爆炸力度
+                        const force = 5 * (1 - distance / radius);
+                        
+                        // 应用爆炸力
+                        this.velocities[i] += direction.x * force;
+                        this.velocities[i+1] += direction.y * force;
+                        this.velocities[i+2] += direction.z * force * 0.5;
+                        
+                        // 改变颜色为爆炸效果
+                        const rgb = this.hslToRgb((40 + Math.random() * 20)/360, 0.9, 0.7);
+                        colors[i] = rgb[0];
+                        colors[i+1] = rgb[1];
+                        colors[i+2] = rgb[2];
+                    }
+                }
+                
+                this.geometry.attributes.color.needsUpdate = true;
+            }
+            
+            createVortexEffect() {
+                const positions = this.geometry.attributes.position.array;
+                
+                // 创建螺旋状初始速度
+                for (let i = 0; i < positions.length; i += 3) {
+                    const x = positions[i];
+                    const y = positions[i+1];
+                    const z = positions[i+2];
+                    
+                    const distance = Math.sqrt(x*x + y*y);
+                    const angle = Math.atan2(y, x);
+                    
+                    // 螺旋向内的速度
+                    this.velocities[i] = -Math.sin(angle) * 1.5;
+                    this.velocities[i+1] = Math.cos(angle) * 1.5;
+                    this.velocities[i+2] = (0.5 - Math.random()) * 0.5;
+                }
+            }
+            
+            createChaosEffect() {
+                // 为每个粒子赋予随机速度
+                for (let i = 0; i < this.velocities.length; i += 3) {
+                    this.velocities[i] = (Math.random() - 0.5) * 5;
+                    this.velocities[i+1] = (Math.random() - 0.5) * 5;
+                    this.velocities[i+2] = (Math.random() - 0.5) * 5;
+                }
             }
 
             applyForces(particlePos, velocity, delta) {
+                // 获取当前模式
+                const mode = this.params.currentMode;
+                
+                // 处理不同模式下的力场行为
+                if (mode === 'default') {
+                    this.applyDefaultForces(particlePos, velocity, delta);
+                } else if (mode === 'explosion') {
+                    this.applyExplosionForces(particlePos, velocity, delta);
+                } else if (mode === 'vortex') {
+                    this.applyVortexForces(particlePos, velocity, delta);
+                } else if (mode === 'gravity') {
+                    this.applyGravityForces(particlePos, velocity, delta);
+                } else if (mode === 'chaos') {
+                    this.applyChaosForces(particlePos, velocity, delta);
+                }
+                
+                // 介绍动画过渡
+                if (this.introAnimationPlaying) {
+                    const toOriginal = new THREE.Vector3(
+                        this.originalPositions[particlePos.index],
+                        this.originalPositions[particlePos.index+1],
+                        this.originalPositions[particlePos.index+2]
+                    ).sub(particlePos);
+                    
+                    const dist = toOriginal.length();
+                    if (dist > 1) {
+                        toOriginal.normalize().multiplyScalar(0.1);
+                        velocity.add(toOriginal);
+                    } else {
+                        velocity.multiplyScalar(0.9);
+                    }
+                }
+                
+                // 全局速度限制
+                if (velocity.length() > this.params.speedLimit) {
+                    velocity.normalize().multiplyScalar(this.params.speedLimit);
+                }
+            }
+            
+            applyDefaultForces(particlePos, velocity, delta) {
                 const toMouse = new THREE.Vector3().subVectors(this.mouse, particlePos);
                 const mouseDist = toMouse.length();
                 
                 // 动态力场系统
-                if (mouseDist < 150) {
+                if (this.isInteracting && mouseDist < 150) {
                     // 核心吸引场（0-50px）
                     if (mouseDist < 50) {
                         const strength = (1 - mouseDist/50) * this.params.mouseForce;
@@ -195,16 +674,118 @@
                 const toCenter = new THREE.Vector3(-particlePos.x, -particlePos.y, 0)
                     .multiplyScalar(this.params.baseForce * delta);
                 velocity.add(toCenter);
+                
+                // 添加轻微的z轴恢复力
+                if (Math.abs(particlePos.z) > 30) {
+                    velocity.z -= Math.sign(particlePos.z) * 0.02;
+                }
+            }
+            
+            applyExplosionForces(particlePos, velocity, delta) {
+                // 基础行为类似默认模式
+                this.applyDefaultForces(particlePos, velocity, delta);
+                
+                // 增加一些随机性使爆炸更加混乱
+                if (Math.random() < 0.01) {
+                    velocity.x += (Math.random() - 0.5) * 0.5;
+                    velocity.y += (Math.random() - 0.5) * 0.5;
+                    velocity.z += (Math.random() - 0.5) * 0.3;
+                }
+            }
+            
+            applyVortexForces(particlePos, velocity, delta) {
+                const toCenter = new THREE.Vector3(-particlePos.x, -particlePos.y, 0);
+                const distance = toCenter.length();
+                
+                // 漩涡效果 - 径向力 + 切向力
+                if (distance > 0) {
+                    // 强烈的径向吸引力
+                    toCenter.normalize().multiplyScalar(this.params.baseForce * 1.5 * delta);
+                    velocity.add(toCenter);
+                    
+                    // 强烈的切向力
+                    const tangent = new THREE.Vector3(-particlePos.y, particlePos.x, 0);
+                    tangent.normalize().multiplyScalar(0.8 * delta);
+                    velocity.add(tangent);
+                }
+                
+                // 鼠标交互 - 扰动漩涡
+                if (this.isInteracting) {
+                    const toMouse = new THREE.Vector3().subVectors(this.mouse, particlePos);
+                    const mouseDist = toMouse.length();
+                    
+                    if (mouseDist < 100) {
+                        const repel = toMouse.clone().normalize().multiplyScalar(-(this.params.mouseForce * 0.5) * delta);
+                        velocity.add(repel);
+                    }
+                }
+            }
+            
+            applyGravityForces(particlePos, velocity, delta) {
+                // 默认行为 - 轻微的环绕
+                const toCenter = new THREE.Vector3(-particlePos.x, -particlePos.y, 0);
+                const distance = toCenter.length();
+                
+                // 弱环绕力
+                toCenter.normalize().multiplyScalar(this.params.baseForce * 0.3 * delta);
+                velocity.add(toCenter);
+                
+                // 鼠标=强力引力井
+                if (this.isInteracting) {
+                    const toMouse = new THREE.Vector3().subVectors(this.mouse, particlePos);
+                    const mouseDist = toMouse.length();
+                    
+                    // 倒数平方引力法则
+                    if (mouseDist > 5) {
+                        const strength = this.params.mouseForce * 30 * delta / (mouseDist * mouseDist);
+                        toMouse.normalize().multiplyScalar(strength);
+                        velocity.add(toMouse);
+                    }
+                }
+            }
+            
+            applyChaosForces(particlePos, velocity, delta) {
+                // 混沌系统 - 随机力
 
-                // 速度限制
-                if (velocity.length() > this.params.speedLimit) {
-                    velocity.normalize().multiplyScalar(this.params.speedLimit);
+                // 周期性添加随机力脉冲
+                if (Math.random() < 0.05) {
+                    velocity.x += (Math.random() - 0.5) * 2;
+                    velocity.y += (Math.random() - 0.5) * 2;
+                    velocity.z += (Math.random() - 0.5) * 2;
+                }
+                
+                // 弱向心力防止完全散开
+                const toCenter = new THREE.Vector3(-particlePos.x, -particlePos.y, -particlePos.z);
+                const dist = toCenter.length();
+                
+                if (dist > 150) {
+                    toCenter.normalize().multiplyScalar(0.05 * delta);
+                    velocity.add(toCenter);
+                }
+                
+                // 粒子之间的简单排斥 (只检查临近索引的粒子作为近似)
+                const idx = particlePos.index;
+                if (idx % 30 === 0 && idx + 3 < this.geometry.attributes.position.array.length) {
+                    const nextPart = new THREE.Vector3(
+                        this.geometry.attributes.position.array[idx+3],
+                        this.geometry.attributes.position.array[idx+4],
+                        this.geometry.attributes.position.array[idx+5]
+                    );
+                    
+                    const toPart = new THREE.Vector3().subVectors(nextPart, particlePos);
+                    const partDist = toPart.length();
+                    
+                    if (partDist < 5) {
+                        toPart.normalize().multiplyScalar(-0.1);
+                        velocity.add(toPart);
+                    }
                 }
             }
 
             updateParticles(delta) {
                 const positions = this.geometry.attributes.position.array;
                 const colors = this.geometry.attributes.color.array;
+                let activeCount = 0;
 
                 for (let i = 0; i < positions.length; i += 3) {
                     const velocity = new THREE.Vector3(
@@ -213,54 +794,179 @@
                         this.velocities[i+2]
                     );
 
-                    // 仅在有交互时应用鼠标力
-                    if (this.isInteracting) {
-                        this.applyForces(
-                            new THREE.Vector3(positions[i], positions[i+1], positions[i+2]),
-                            velocity,
-                            delta
-                        );
+                    // 包含索引信息的位置向量
+                    const particlePos = new THREE.Vector3(positions[i], positions[i+1], positions[i+2]);
+                    particlePos.index = i;
+                    
+                    // 应用模式特定的力场
+                    this.applyForces(particlePos, velocity, delta);
+                    
+                    // 运动衰减 - 不同模式有不同衰减率
+                    if (this.params.currentMode === 'chaos') {
+                        velocity.multiplyScalar(0.98); // 较小衰减
+                    } else if (this.params.currentMode === 'gravity') {
+                        velocity.multiplyScalar(0.99); // 极小衰减
+                    } else {
+                        velocity.multiplyScalar(0.96); // 标准衰减
                     }
-
-                    // 运动衰减
-                    velocity.multiplyScalar(0.96);
                     
                     // 更新位置
                     positions[i] += velocity.x;
                     positions[i+1] += velocity.y;
                     positions[i+2] += velocity.z;
+                    
+                    // 边界检查 - 防止粒子飞太远
+                    const maxDist = 250;
+                    const dist = Math.sqrt(
+                        positions[i] * positions[i] + 
+                        positions[i+1] * positions[i+1] + 
+                        positions[i+2] * positions[i+2]
+                    );
+                    
+                    if (dist > maxDist) {
+                        // 将粒子拉回边界
+                        const factor = maxDist / dist;
+                        positions[i] *= factor;
+                        positions[i+1] *= factor;
+                        positions[i+2] *= factor;
+                        
+                        // 减小速度
+                        this.velocities[i] *= 0.7;
+                        this.velocities[i+1] *= 0.7;
+                        this.velocities[i+2] *= 0.7;
+                    }
 
-                    // 动态颜色反馈
+                    // 记录速度数据
+                    this.velocities[i] = velocity.x;
+                    this.velocities[i+1] = velocity.y;
+                    this.velocities[i+2] = velocity.z;
+
+                    // 动态颜色反馈 - 不同模式有不同的颜色方案
                     const speed = velocity.length();
+                    let hueBase = 220; // 默认蓝色基调
+                    
+                    if (this.params.currentMode === 'explosion') {
+                        hueBase = speed > 1.5 ? 30 : 220; // 爆炸时快速粒子变为橙色
+                    } else if (this.params.currentMode === 'vortex') {
+                        hueBase = 270; // 漩涡模式为紫色
+                    } else if (this.params.currentMode === 'gravity') {
+                        hueBase = 140; // 引力模式为绿色
+                    } else if (this.params.currentMode === 'chaos') {
+                        hueBase = (dist / maxDist) * 360; // 混沌模式彩虹色
+                    }
+                    
                     const hueShift = speed * this.params.colorResponse;
                     const rgb = this.hslToRgb(
-                        (220 + Math.min(hueShift, 50))/360,
+                        (hueBase + Math.min(hueShift, 50))/360,
                         0.7,
                         0.6 + speed * 0.3
                     );
                     colors[i] = rgb[0];
                     colors[i+1] = rgb[1];
                     colors[i+2] = rgb[2];
+                    
+                    // 计算活跃粒子数量（速度大于阈值）
+                    if (speed > 0.2) activeCount++;
                 }
 
                 this.geometry.attributes.position.needsUpdate = true;
                 this.geometry.attributes.color.needsUpdate = true;
+                this.stats.activeParticles = activeCount;
+            }
+            
+            updateStats() {
+                // 计算FPS
+                const now = performance.now();
+                const elapsed = now - this.lastTime;
+                this.frameCount++;
+                
+                if (elapsed >= 1000) {
+                    this.stats.fps = Math.round((this.frameCount * 1000) / elapsed);
+                    this.frameCount = 0;
+                    this.lastTime = now;
+                    
+                    // 更新统计显示
+                    document.getElementById('stats').textContent = 
+                        `FPS: ${this.stats.fps} | 活跃粒子: ${this.stats.activeParticles} | 互动次数: ${this.stats.mouseInteractions}`;
+                }
+            }
+            
+            updateLights(delta) {
+                // 光源动态动画
+                const time = performance.now() * 0.001;
+                
+                // 辅助光源轨道移动
+                this.accentLight1.position.x = Math.sin(time * 0.3) * 100;
+                this.accentLight1.position.y = Math.cos(time * 0.4) * 100;
+                
+                this.accentLight2.position.x = Math.sin(time * 0.4 + Math.PI) * 100;
+                this.accentLight2.position.y = Math.cos(time * 0.3 + Math.PI) * 100;
+                
+                // 根据模式调整光源颜色
+                if (this.params.currentMode === 'explosion') {
+                    this.focusLight.color.setHSL(0.05, 0.8, 0.7);
+                    this.accentLight1.color.setHSL(0.05, 0.9, 0.7);
+                } else if (this.params.currentMode === 'vortex') {
+                    this.focusLight.color.setHSL(0.75, 0.8, 0.7);
+                    this.accentLight1.color.setHSL(0.7, 0.9, 0.7);
+                } else if (this.params.currentMode === 'gravity') {
+                    this.focusLight.color.setHSL(0.35, 0.8, 0.7);
+                    this.accentLight1.color.setHSL(0.4, 0.9, 0.7);
+                } else if (this.params.currentMode === 'chaos') {
+                    this.focusLight.color.setHSL((time * 0.1) % 1, 0.8, 0.7);
+                    this.accentLight1.color.setHSL(((time * 0.1) + 0.5) % 1, 0.9, 0.7);
+                } else {
+                    // 默认模式
+                    this.focusLight.color.setHSL(0.63 + (this.isInteracting ? 0.05 : 0), 0.8, 0.7);
+                }
+                
+                // 光效追踪系统
+                this.focusLight.position.lerp(this.mouse, 0.15);
+                this.focusLight.intensity = this.isInteracting ? 4.0 : 2.4;
+                
+                // 交互点颜色变化
+                const cursor = document.getElementById('cursor');
+                if (this.isInteracting) {
+                    // 根据模式设置不同的光标颜色
+                    let cursorColor;
+                    if (this.params.currentMode === 'explosion') {
+                        cursorColor = 'rgba(255, 160, 80, 0.3)';
+                    } else if (this.params.currentMode === 'vortex') {
+                        cursorColor = 'rgba(180, 120, 255, 0.3)';
+                    } else if (this.params.currentMode === 'gravity') {
+                        cursorColor = 'rgba(120, 255, 160, 0.3)';
+                    } else if (this.params.currentMode === 'chaos') {
+                        const h = (time * 50) % 360;
+                        cursorColor = `hsla(${h}, 80%, 70%, 0.3)`;
+                    } else {
+                        cursorColor = 'rgba(160, 180, 255, 0.3)';
+                    }
+                    cursor.style.background = cursorColor;
+                }
             }
 
             animate() {
                 requestAnimationFrame(() => this.animate());
                 const delta = this.clock.getDelta();
                 
-                // 光效追踪系统
-                this.focusLight.position.lerp(this.mouse, 0.15);
-                this.focusLight.intensity = this.isInteracting ? 4.0 : 2.4;
-                this.focusLight.color.setHSL(
-                    0.63 + (this.isInteracting ? 0.05 : 0),
-                    0.8,
-                    0.7
-                );
-
+                this.updateLights(delta);
                 this.updateParticles(delta);
+                this.updateStats();
+                
+                // 摄像机轻微移动增加沉浸感
+                if (this.params.currentMode === 'chaos' || this.params.currentMode === 'vortex') {
+                    const time = performance.now() * 0.0005;
+                    this.camera.position.x = Math.sin(time) * 5;
+                    this.camera.position.y = Math.cos(time) * 5;
+                    this.camera.lookAt(0, 0, 0);
+                } else {
+                    // 恢复默认位置
+                    this.camera.position.x *= 0.95;
+                    this.camera.position.y *= 0.95;
+                    if (Math.abs(this.camera.position.x) < 0.1) this.camera.position.x = 0;
+                    if (Math.abs(this.camera.position.y) < 0.1) this.camera.position.y = 0;
+                }
+                
                 this.renderer.render(this.scene, this.camera);
             }
         }
